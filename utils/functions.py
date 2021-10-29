@@ -1,7 +1,8 @@
 import re
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField, TextAreaField
+from wtforms import StringField, SubmitField, TextAreaField, FileField
 from wtforms.validators import DataRequired
+from flask_wtf.file import FileRequired, FileAllowed
 
 
 class ResultForm(FlaskForm):
@@ -43,3 +44,17 @@ class API_sql_template(FlaskForm):
         s = re.sub(r'[\s]+', ' ', s)
         s = re.sub(r'=[\s]*.*?\s+', '= ', s+' ')
         return s 
+
+class API_upload_file(FlaskForm):
+    comment = '上传PDF文件'
+    file = FileField(
+        label="PDF文件",
+        validators=[
+            FileRequired(),
+            FileAllowed(['pdf'], 'Only *.pdf is allowed')
+        ]
+    )
+    submit = SubmitField('提交')
+    
+    def run(self,):
+        return self.file.data.filename
