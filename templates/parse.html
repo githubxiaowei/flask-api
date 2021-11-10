@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>日志解析工具</title>
+<script src="https://unpkg.com/vue@next"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<!-- 新 Bootstrap4 核心 CSS 文件 -->
+<link rel="stylesheet" href="https://cdn.staticfile.org/twitter-bootstrap/4.3.1/css/bootstrap.min.css">
+<!-- jQuery文件。务必在bootstrap.min.js 之前引入 -->
+<script src="https://cdn.staticfile.org/jquery/3.2.1/jquery.min.js"></script>
+<!-- bootstrap.bundle.min.js 用于弹窗、提示、下拉菜单，包含了 popper.min.js -->
+<script src="https://cdn.staticfile.org/popper.js/1.15.0/umd/popper.min.js"></script>
+<!-- 最新的 Bootstrap4 核心 JavaScript 文件 -->
+<script src="https://cdn.staticfile.org/twitter-bootstrap/4.3.1/js/bootstrap.min.js"></script>
+<script src="statics/bootbox.all.min.js"></script>
+</head>
+<body>
+<div id="app"  class="container mt-3">
+<ul class="list-group">
+    <li class="list-group-item list-group-item-dark">
+    <div class="container p-5 my-5 border bg-white">
+        <table class="table table-bordered" width="100%">
+        <tr>
+        <div style="padding-left:1px;padding-right:5px;">
+            <textarea rows="10" v-model = "input_str"
+                      style="resize: none;width: 100%;overflow: auto;word-break: break-all;"></textarea>
+        </div>
+        </tr>
+        <tr>
+            <button type="button" class="btn btn-outline-primary" style="width:50%;" @click="add_block(0,input_str)">开始解析</button>
+            <button type="button" class="btn btn-outline-secondary" style="width:50%;" @click="show_result">输出解析树</button>    
+        </tr>
+        </table>
+    </div>
+    </li>
+  <parse_block
+    v-for="(block, index) in blocks"
+    :id="block.id"
+    :from="block.from"
+    :reg_str="block.reg_str"
+    :sub_str="block.sub_str"
+    :input_str="block.input_str"
+    :rule="block.rule"
+    @delete="delete_block"
+    @add_sub_block="add_block"
+    @set_reg="set_reg"
+    @set_sub="set_sub"
+  ></parse_block>
+</ul>
+</div>
+ 
+<script>
+var api_address = 'http://192.168.56.103:8080/parse'
+var parse_block =  {
+    props: ['id', 'from', 'reg_str', 'sub_str','input_str', 'rule'],
+    emits: ['delete', 'add_sub_block', 'set_reg', 'set_sub'],
+    data(){
+        return{
+            'output_str':''
+        }
+    },
+    methods:{
+        parse(){
+            if(this.reg_str === ''){
+                alert('请输入正则表达式！')
+            }else{
+                axios.post(
+                        api_address,
+                        {
+                            rule: this.rule,
+                            reg_str: this.reg_str,
+                            sub_str: this.sub_str,
+                            input_str: this.input_str
+                        },
+                    )
+                .then(response => {
+                    this.output_str = response.data.data
+                    console.log(response)
+                })
+                .catch(function (error) { // 请求失败处理
+                    console.log(error);
+                })
+            }
+        },
+        edit_reg(){
+            bootbox.prompt("正则表达式", result => {
+                this.$emit('set_reg', this.id, result)
+                console.log(result)
+            })
+        },
+        edit_sub(){
+            bootbox.prompt("替换成", result => {
+                this.$emit('set_sub', this.id, result)
+                console.log(result)
+            })
+        }
+    },
+    template: `
+<li class="list-group-item list-group-item-dark">
+<div class="container p-5 my-5 border bg-white">
+<table class="table table-bordered" width="100%">
+    <tr>
+        <th colspan="1" align='left'>
+            <div class="input-group mb-3">
+            <div class="input-group-prepend">
+            <span class="input-group-text">节点编号: </span>
+            </div>
+            <input v-model="id"  readonly />
+        </div></th>
+        <th colspan="1" align='left'>
+            <div class="input-group mb-3">
+            <div class="input-group-prepend">
+            <span class="input-group-text">父节点编号: </span>
+            </div>
+            <input v-model="from"  readonly />
+        </div></th>
+    </tr>
+    <tr>
+    <td colspan="2">
+        <div class="input-group mb-3">
+            <div class="input-group-prepend">
+            <span class="input-group-text">正则表达式：</span>
+            </div>
+            <input v-model="reg_str" class="form-control"  readonly />
+            <button type="button" class="btn btn-outline-secondary" @click="edit_reg" >修改</button>
+        </div>
+        <div class="input-group mb-3" v-show="rule==1">
+            <div class="input-group-prepend">
+            <span class="input-group-text">替换成字符：</span>
+            </div>
+            <textarea readonly class="form-control">{{sub_str}}</textarea>
+            <button type="button" class="btn btn-outline-secondary" @click="edit_sub" >修改</button>
+        </div>
+    </td>
+    </tr>
+    <tr>
+        <td colspan="1">
+        <div>输入：</div>
+        <div style="padding-left:1px;padding-right:5px;">
+            <textarea readonly cols="10" rows="10" style="resize: none;width: 100%;overflow: auto;word-break: break-all;"  v-model="input_str" ></textarea>
+        </div>
+        </td>
+        <td colspan="1">
+        <div>输出：</div>
+        <div style="padding-left:1px;padding-right:5px;">
+            <textarea cols="10" rows="10" v-model = "output_str" style="resize: none;width: 100%;overflow: auto;word-break: break-all;"></textarea>
+        </div>
+        </td>
+    </tr>
+    <tr>
+    <td colspan="2" align='right'>
+        <button type="button" class="btn btn-outline-primary" style="width:50%;" @click="parse">解析</button>
+        <button type="button" class="btn btn-outline-secondary" style="width:25%;" @click="$emit('add_sub_block', id, output_str)">新建子节点</button>
+        <button type="button" class="btn btn-outline-danger" style="width:25%;" @click="$emit('delete', id)">删除该节点</button>
+    </td>
+    </tr>
+</table>
+</div>
+</li>
+`
+}
+const app = Vue.createApp({
+    data() {
+        return {
+            input_str: '',
+            blocks: [
+            ],
+            n_blocks: 0,
+        }
+    },
+    components: {
+        'parse_block': parse_block
+    },
+    methods:{
+        delete_block:function(id){
+            let index = this.blocks.findIndex(function(block){
+                return block.id === id
+            })
+            this.blocks.splice(index,1)
+            // this.n_blocks = this.n_blocks - 1
+            console.log(this.blocks)
+
+        },
+        add_block:function(from, input_str){
+            bootbox.prompt({ 
+                title: "选择节点类型", 
+                inputType: 'radio', 
+                inputOptions: [
+                    {
+                        text:'匹配',
+                        value:0,
+                    },
+                    {
+                        text:'替换',
+                        value:1,
+                    },
+
+                ], 
+                callback: result => { 
+                    console.log(result)
+                    if(from === 0){
+                        this.n_blocks = 0
+                        this.blocks.length = 0
+                    }
+                    this.n_blocks = this.n_blocks + 1
+                    this.blocks.push({
+                        id: this.n_blocks,
+                        from: from,
+                        input_str: input_str,
+                        reg_str: '',
+                        sub_str: '',
+                        rule: result
+                    })
+                } 
+            }); 
+            
+        },
+        set_reg:function(id, reg_str){
+            let index = this.blocks.findIndex(function(block){
+                return block.id === id
+            })
+            this.blocks[index].reg_str = reg_str
+        },
+        set_sub:function(id, sub_str){
+            let index = this.blocks.findIndex(function(block){
+                return block.id === id
+            })
+            this.blocks[index].sub_str = sub_str
+        },
+        show_result:function(){
+            alert(this.blocks)
+        }
+    }
+})
+app.mount('#app')
+</script>
+</body>
+</html>

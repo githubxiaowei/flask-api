@@ -1,10 +1,13 @@
 from flask import Flask,render_template,request,session
+from flask import jsonify
 from utils import *
 from inspect import isfunction
 from flask_bootstrap import Bootstrap
+from flask_cors import cross_origin
+import json
 
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder="./statics")
 bootstrap = Bootstrap(app)
 app.config['SECRET_KEY'] = 'OH ITS A SECRET!'
 
@@ -44,6 +47,27 @@ def api(func):
 def page_not_found(e):
     return render_template('404.html'), 404
 
+
+
+@app.route('/parse',methods=['GET','POST'])
+@cross_origin()
+def parse():
+    if request.method == 'GET':
+        return render_template(
+        'parse.html',
+        )
+    elif request.method == 'POST':
+        data = json.loads(request.data) # 将json字符串转为dict
+        print(data)
+        
+        result = {}
+        result['status'] = 'OK'
+        result['data'] = 'test'
+        result['message'] = 'message'
+        return jsonify(result)
+
+
+
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=8080, debug=True)
 
